@@ -107,6 +107,12 @@ exports.default = async (error, req, res, _next) => {
                     message: '上傳錯誤',
                 });
                 break;
+            case 'EVENT NOT FOUND':
+                res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({
+                    success: false,
+                    message: '找不到活動',
+                });
+                break;
             case 'PRODUCT NOT FOUND':
                 res.status(http_status_codes_1.StatusCodes.NOT_FOUND).json({
                     success: false,

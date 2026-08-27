@@ -40,30 +40,47 @@ exports.confirmSeat = exports.releaseSeat = exports.holdSeat = exports.getSeats 
 const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = require("mongoose");
 const yup = __importStar(require("yup"));
+const event_1 = __importDefault(require("../models/event"));
+const order_1 = __importDefault(require("../models/order"));
 const seat_1 = __importDefault(require("../models/seat"));
 const HOLD_MS = 5 * 60 * 1000;
 const MAX_ACTIVE_HOLDS = 10;
-async function clearExpiredHolds() {
-    await seat_1.default.updateMany({ heldUntil: (0, mongoose_1.trusted)({ $lte: new Date() }), bookedBy: null }, { $unset: { heldBy: 1, heldUntil: 1 } });
+async function getEvent(slug) {
+    const event = await event_1.default.findOne({ slug });
+    if (!event)
+        throw new Error('EVENT NOT FOUND');
+    return event;
+}
+async function clearExpiredHolds(eventId) {
+    await seat_1.default.updateMany({ event: eventId, heldUntil: (0, mongoose_1.trusted)({ $lte: new Date() }), bookedBy: null }, { $unset: { heldBy: 1, heldUntil: 1 } });
 }
 const getSeats = async (req, res) => {
-    await clearExpiredHolds();
+    const event = await getEvent(String(req.params.eventSlug));
+    await clearExpiredHolds(event._id);
     const userId = req.user._id;
     const now = new Date();
-    const seats = await seat_1.default.find().sort({ number: 1 }).lean();
-    const activeSelectors = await seat_1.default.countDocuments({ heldUntil: (0, mongoose_1.trusted)({ $gt: now }) });
+    const seats = await seat_1.default.find({ event: event._id }).sort({ number: 1 }).lean();
+    const activeSelectors = await seat_1.default.countDocuments({
+        event: event._id,
+        heldUntil: (0, mongoose_1.trusted)({ $gt: now }),
+    });
     res.status(http_status_codes_1.StatusCodes.OK).json({
         success: true,
         message: '',
         result: {
             activeSelectors,
             maxSelectors: MAX_ACTIVE_HOLDS,
-            seats: seats.map(seat => ({
+            seats: seats.map((seat) => ({
                 number: seat.number,
                 status: seat.bookedBy
-                    ? seat.bookedBy.equals(userId) ? 'mine-booked' : 'booked'
-                    : seat.heldBy?.equals(userId) ? 'mine-held'
-                        : seat.heldUntil && seat.heldUntil > now ? 'held' : 'available',
+                    ? seat.bookedBy.equals(userId)
+                        ? 'mine-booked'
+                        : 'booked'
+                    : seat.heldBy?.equals(userId)
+                        ? 'mine-held'
+                        : seat.heldUntil && seat.heldUntil > now
+                            ? 'held'
+                            : 'available',
                 heldUntil: seat.heldBy?.equals(userId) ? seat.heldUntil : undefined,
             })),
         },
@@ -71,43 +88,38 @@ const getSeats = async (req, res) => {
 };
 exports.getSeats = getSeats;
 const holdSeat = async (req, res) => {
-    const bodySchema = yup.object({
-        number: yup.number().integer().min(1).max(50).required('請選擇座位'),
-    });
-    const { number } = await bodySchema.validate(req.body, { stripUnknown: true });
+    const event = await getEvent(String(req.params.eventSlug));
+    const { number } = await yup
+        .object({ number: yup.number().integer().min(1).max(event.capacity).required('請選擇座位') })
+        .validate(req.body, { stripUnknown: true });
     const userId = req.user._id;
     const now = new Date();
-    await clearExpiredHolds();
-    if (await seat_1.default.exists({ bookedBy: userId }))
+    await clearExpiredHolds(event._id);
+    if (await seat_1.default.exists({ event: event._id, bookedBy: userId }))
         throw new Error('BOOKING EXISTS');
-    const currentHold = await seat_1.default.findOne({ heldBy: userId });
+    const currentHold = await seat_1.default.findOne({ event: event._id, heldBy: userId });
     if (currentHold?.number === number) {
         res.status(http_status_codes_1.StatusCodes.OK).json({ success: true, message: '', result: currentHold });
         return;
     }
-    if (!currentHold && await seat_1.default.countDocuments({ heldUntil: (0, mongoose_1.trusted)({ $gt: now }) }) >= MAX_ACTIVE_HOLDS) {
+    if (!currentHold &&
+        (await seat_1.default.countDocuments({ event: event._id, heldUntil: (0, mongoose_1.trusted)({ $gt: now }) })) >=
+            MAX_ACTIVE_HOLDS)
         throw new Error('SELECTION FULL');
-    }
-    if (currentHold) {
+    if (currentHold)
         await seat_1.default.updateOne({ _id: currentHold._id }, { $unset: { heldBy: 1, heldUntil: 1 } });
-    }
     const heldUntil = new Date(Date.now() + HOLD_MS);
     const seat = await seat_1.default.findOneAndUpdate({
+        event: event._id,
         number,
         bookedBy: null,
-        $or: [
-            { heldBy: null },
-            { heldUntil: (0, mongoose_1.trusted)({ $lte: now }) },
-        ],
+        $or: [{ heldBy: null }, { heldUntil: (0, mongoose_1.trusted)({ $lte: now }) }],
     }, { $set: { heldBy: userId, heldUntil } }, { returnDocument: 'after' });
-    if (!seat) {
-        if (currentHold) {
-            await seat_1.default.updateOne({ _id: currentHold._id, heldBy: null, bookedBy: null }, { $set: { heldBy: userId, heldUntil: currentHold.heldUntil } });
-        }
+    if (!seat)
         throw new Error('SEAT UNAVAILABLE');
-    }
-    // ponytail: post-check keeps the MVP on MongoDB without adding a queue service.
-    if (await seat_1.default.countDocuments({ heldUntil: (0, mongoose_1.trusted)({ $gt: now }) }) > MAX_ACTIVE_HOLDS) {
+    // ponytail: MongoDB post-check is enough for the MVP's ten concurrent selectors.
+    if ((await seat_1.default.countDocuments({ event: event._id, heldUntil: (0, mongoose_1.trusted)({ $gt: now }) })) >
+        MAX_ACTIVE_HOLDS) {
         await seat_1.default.updateOne({ _id: seat._id, heldBy: userId }, { $unset: { heldBy: 1, heldUntil: 1 } });
         throw new Error('SELECTION FULL');
     }
@@ -115,28 +127,50 @@ const holdSeat = async (req, res) => {
 };
 exports.holdSeat = holdSeat;
 const releaseSeat = async (req, res) => {
-    await seat_1.default.updateOne({ heldBy: req.user._id, bookedBy: null }, { $unset: { heldBy: 1, heldUntil: 1 } });
+    const event = await getEvent(String(req.params.eventSlug));
+    await seat_1.default.updateOne({ event: event._id, heldBy: req.user._id, bookedBy: null }, { $unset: { heldBy: 1, heldUntil: 1 } });
     res.status(http_status_codes_1.StatusCodes.OK).json({ success: true, message: '', result: {} });
 };
 exports.releaseSeat = releaseSeat;
 const confirmSeat = async (req, res) => {
+    const event = await getEvent(String(req.params.eventSlug));
     const userId = req.user._id;
-    const existingBooking = await seat_1.default.findOne({ bookedBy: userId });
-    if (existingBooking) {
-        res.status(http_status_codes_1.StatusCodes.OK).json({ success: true, message: '', result: existingBooking });
+    const existingOrder = await order_1.default.findOne({ user: userId, 'items.event': event._id });
+    if (existingOrder) {
+        res.status(http_status_codes_1.StatusCodes.OK).json({ success: true, message: '', result: existingOrder });
         return;
     }
-    const seat = await seat_1.default.findOneAndUpdate({
-        heldBy: userId,
-        heldUntil: (0, mongoose_1.trusted)({ $gt: new Date() }),
-        bookedBy: null,
-    }, {
-        $set: { bookedBy: userId, bookedAt: new Date() },
+    const seat = await seat_1.default.findOneAndUpdate({ event: event._id, heldBy: userId, heldUntil: (0, mongoose_1.trusted)({ $gt: new Date() }), bookedBy: null }, {
+        $set: { bookedBy: userId, bookedAt: new Date(), status: 'booked' },
         $unset: { heldBy: 1, heldUntil: 1 },
     }, { returnDocument: 'after' });
     if (!seat)
         throw new Error('HOLD EXPIRED');
-    res.status(http_status_codes_1.StatusCodes.CREATED).json({ success: true, message: '', result: seat });
+    try {
+        const order = await order_1.default.create({
+            user: userId,
+            orderNo: `TIX${Date.now()}${Math.floor(Math.random() * 1000)
+                .toString()
+                .padStart(3, '0')}`,
+            status: 'paid',
+            totalAmount: seat.price,
+            items: [
+                {
+                    event: event._id,
+                    seat: seat._id,
+                    eventTitle: event.title,
+                    seatLabel: `${seat.section} 區 ${seat.row} 排 ${seat.number} 號`,
+                    price: seat.price,
+                    quantity: 1,
+                },
+            ],
+        });
+        res.status(http_status_codes_1.StatusCodes.CREATED).json({ success: true, message: '', result: order });
+    }
+    catch (error) {
+        await seat_1.default.updateOne({ _id: seat._id, bookedBy: userId }, { $set: { status: 'available' }, $unset: { bookedBy: 1, bookedAt: 1 } });
+        throw error;
+    }
 };
 exports.confirmSeat = confirmSeat;
 //# sourceMappingURL=ticket.js.map

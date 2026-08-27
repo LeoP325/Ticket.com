@@ -5,10 +5,12 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import helmet from 'helmet'
 import routeAuth from './routes/auth'
+import routeEvent from './routes/event'
+import routeOrder from './routes/order'
 import routeTicket from './routes/ticket'
 import middlewareError from './middlewares/error'
 import './configs/passport'
-import { ensureSeats } from './models/seat'
+import { ensureCatalog } from './data/catalog'
 
 mongoose.set('sanitizeFilter', true)
 
@@ -41,13 +43,15 @@ app.use(express.json())
 app.use(cookieParser())
 
 app.use('/auth', routeAuth)
+app.use('/events', routeEvent)
+app.use('/orders', routeOrder)
 app.use('/ticket', routeTicket)
 
 app.use(middlewareError)
 
-async function start () {
+async function start() {
   await mongoose.connect(process.env.DB_URL)
-  await ensureSeats()
+  await ensureCatalog()
   console.log('資料庫連線成功')
 
   app.listen(process.env.PORT || 4000, () => {
@@ -55,7 +59,7 @@ async function start () {
   })
 }
 
-start().catch(error => {
+start().catch((error) => {
   console.error(error)
   console.error('伺服器啟動失敗')
 })

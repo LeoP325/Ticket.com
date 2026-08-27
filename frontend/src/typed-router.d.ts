@@ -38,9 +38,23 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/events/[slug]': RouteRecordInfo<
+      '/events/[slug]',
+      '/events/:slug',
+      { slug: ParamValue<true> },
+      { slug: ParamValue<false> },
+      | never
+    >,
     '/login': RouteRecordInfo<
       '/login',
       '/login',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/orders': RouteRecordInfo<
+      '/orders',
+      '/orders',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -80,9 +94,25 @@ declare module 'vue-router/auto-routes' {
       pathParamNames:
         | never
     }
+    'src/pages/events/[slug].vue': {
+      routes:
+        | '/events/[slug]'
+      views:
+        | never
+      pathParamNames:
+        | 'slug'
+    }
     'src/pages/login.vue': {
       routes:
         | '/login'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
+    'src/pages/orders.vue': {
+      routes:
+        | '/orders'
       views:
         | never
       pathParamNames:

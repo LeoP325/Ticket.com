@@ -34,10 +34,9 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const middlewareAuth = __importStar(require("../middlewares/auth"));
 const controllerOrder = __importStar(require("../controllers/order"));
+const middlewareAuth = __importStar(require("../middlewares/auth"));
 const router = (0, express_1.Router)();
-router.post('/', middlewareAuth.jwt, controllerOrder.create);
 router.get('/', middlewareAuth.jwt, controllerOrder.get);
 router.get('/all', middlewareAuth.jwt, middlewareAuth.admin, controllerOrder.getAll);
 exports.default = router;

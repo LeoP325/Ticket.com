@@ -1,35 +1,34 @@
-import { defineMutation, defineQuery, useMutation, useQuery, useQueryCache } from '@pinia/colada'
+import { useMutation, useQuery, useQueryCache } from '@pinia/colada'
 import * as ticket from '@/services/ticket'
 
-export const useSeatsQuery = defineQuery(() => useQuery({
-  key: ['ticket'],
-  query: async () => {
-    const { data } = await ticket.getSeats()
-    return data.result
-  },
-  staleTime: 0,
-}))
+export function useSeatsQuery (eventSlug: string) {
+  return useQuery({
+    key: ['ticket', eventSlug],
+    query: async () => (await ticket.getSeats(eventSlug)).data.result,
+    staleTime: 0,
+  })
+}
 
-export const useHoldSeatMutation = defineMutation(() => {
+export function useHoldSeatMutation (eventSlug: string) {
   const queryCache = useQueryCache()
   return useMutation({
-    mutation: (number: number) => ticket.holdSeat(number),
-    onSuccess: () => queryCache.invalidateQueries({ key: ['ticket'] }),
+    mutation: (number: number) => ticket.holdSeat(eventSlug, number),
+    onSuccess: () => queryCache.invalidateQueries({ key: ['ticket', eventSlug] }),
   })
-})
+}
 
-export const useReleaseSeatMutation = defineMutation(() => {
+export function useReleaseSeatMutation (eventSlug: string) {
   const queryCache = useQueryCache()
   return useMutation({
-    mutation: () => ticket.releaseSeat(),
-    onSuccess: () => queryCache.invalidateQueries({ key: ['ticket'] }),
+    mutation: () => ticket.releaseSeat(eventSlug),
+    onSuccess: () => queryCache.invalidateQueries({ key: ['ticket', eventSlug] }),
   })
-})
+}
 
-export const useConfirmSeatMutation = defineMutation(() => {
+export function useConfirmSeatMutation (eventSlug: string) {
   const queryCache = useQueryCache()
   return useMutation({
-    mutation: () => ticket.confirmSeat(),
-    onSuccess: () => queryCache.invalidateQueries({ key: ['ticket'] }),
+    mutation: () => ticket.confirmSeat(eventSlug),
+    onSuccess: () => queryCache.invalidateQueries({ key: ['ticket', eventSlug] }),
   })
-})
+}

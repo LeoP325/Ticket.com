@@ -3,18 +3,18 @@ import type { Seat, TicketState } from '@/types/ticket'
 import type { AxiosResponse } from 'axios'
 import { apiAuth } from '@/utils/api'
 
-export function getSeats (): Promise<AxiosResponse<ApiResponse<TicketState>>> {
-  return apiAuth.get('/ticket')
+export function getSeats (eventSlug: string): Promise<AxiosResponse<ApiResponse<TicketState>>> {
+  return apiAuth.get(`/ticket/${eventSlug}`)
 }
 
-export function holdSeat (number: number): Promise<AxiosResponse<ApiResponse<Seat>>> {
-  return apiAuth.post('/ticket/hold', { number })
+export function holdSeat (eventSlug: string, number: number): Promise<AxiosResponse<ApiResponse<Seat>>> {
+  return apiAuth.post(`/ticket/${eventSlug}/hold`, { number })
 }
 
-export function releaseSeat (): Promise<AxiosResponse<ApiResponse<{}>>> {
-  return apiAuth.delete('/ticket/hold')
+export function releaseSeat (eventSlug: string): Promise<AxiosResponse<ApiResponse<{}>>> {
+  return apiAuth.delete(`/ticket/${eventSlug}/hold`)
 }
 
-export function confirmSeat (): Promise<AxiosResponse<ApiResponse<Seat>>> {
-  return apiAuth.post('/ticket/confirm')
+export function confirmSeat (eventSlug: string): Promise<AxiosResponse<ApiResponse<unknown>>> {
+  return apiAuth.post(`/ticket/${eventSlug}/confirm`)
 }

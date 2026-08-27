@@ -34,13 +34,13 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const middlewareAuth = __importStar(require("../middlewares/auth"));
 const controllerTicket = __importStar(require("../controllers/ticket"));
+const middlewareAuth = __importStar(require("../middlewares/auth"));
 const router = (0, express_1.Router)();
 router.use(middlewareAuth.jwt);
-router.get('/', controllerTicket.getSeats);
-router.post('/hold', controllerTicket.holdSeat);
-router.delete('/hold', controllerTicket.releaseSeat);
-router.post('/confirm', controllerTicket.confirmSeat);
+router.get('/:eventSlug', controllerTicket.getSeats);
+router.post('/:eventSlug/hold', controllerTicket.holdSeat);
+router.delete('/:eventSlug/hold', controllerTicket.releaseSeat);
+router.post('/:eventSlug/confirm', controllerTicket.confirmSeat);
 exports.default = router;
 //# sourceMappingURL=ticket.js.map
