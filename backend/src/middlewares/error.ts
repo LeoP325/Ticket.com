@@ -35,8 +35,10 @@ export default async (error: unknown, req: Request, res: Response, _next: NextFu
   }
   // 重複錯誤
   else if (error instanceof MongoServerError && error.code === 11000) {
+    const field = Object.keys(error.keyPattern ?? {})[0]
     res.status(StatusCodes.CONFLICT).json({
-      message: '帳號重複',
+      success: false,
+      message: field === 'email' ? 'Email 已被使用' : '帳號重複',
     })
   }
   // 自訂錯誤
@@ -47,6 +49,20 @@ export default async (error: unknown, req: Request, res: Response, _next: NextFu
           success: false,
           message: '帳號或密碼錯誤',
         })
+        break
+      case 'CURRENT PASSWORD':
+        res.status(StatusCodes.UNAUTHORIZED).json({
+          success: false,
+          message: '目前密碼錯誤',
+        })
+        break
+      case 'EMAIL NOT VERIFIED':
+        res.status(StatusCodes.FORBIDDEN).json({ success: false, message: '請先完成 Email 驗證' })
+        break
+      case 'EMAIL TOKEN':
+        res
+          .status(StatusCodes.BAD_REQUEST)
+          .json({ success: false, message: '驗證連結無效或已過期' })
         break
       case 'TOKEN':
       case 'RT':
@@ -112,13 +128,31 @@ export default async (error: unknown, req: Request, res: Response, _next: NextFu
       case 'BOOKING EXISTS':
         res.status(StatusCodes.CONFLICT).json({
           success: false,
-          message: '每個帳號限購一個座位',
+          message: '每個帳號最多可訂兩張票',
         })
+        break
+      case 'RAFFLE ONLY':
+        res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: '此活動採登記抽選制' })
+        break
+      case 'NOT RAFFLE':
+        res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: '此活動不採抽選制' })
+        break
+      case 'RAFFLE CLOSED':
+        res.status(StatusCodes.CONFLICT).json({ success: false, message: '登記時間已截止' })
+        break
+      case 'DRAW TOO EARLY':
+        res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: '尚未到抽選日' })
         break
       case 'HOLD EXPIRED':
         res.status(StatusCodes.CONFLICT).json({
           success: false,
           message: '座位保留時間已到，請重新選位',
+        })
+        break
+      case 'ORDER NOT REFUNDABLE':
+        res.status(StatusCodes.CONFLICT).json({
+          success: false,
+          message: '找不到可退票的訂單，或此訂單已退票',
         })
         break
       default:

@@ -37,6 +37,8 @@ const express_1 = require("express");
 const middlewareAuth = __importStar(require("../middlewares/auth"));
 const controllerUser = __importStar(require("../controllers/user"));
 const router = (0, express_1.Router)();
+router.patch('/profile', middlewareAuth.jwt, controllerUser.updateProfile);
+router.get('/login-history', middlewareAuth.jwt, middlewareAuth.admin, controllerUser.getLoginHistory);
 router.patch('/cart', middlewareAuth.jwt, controllerUser.cart);
 router.get('/cart', middlewareAuth.jwt, controllerUser.getCart);
 exports.default = router;

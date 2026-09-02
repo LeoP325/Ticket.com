@@ -4,6 +4,15 @@ import * as controllerUser from '../controllers/user'
 
 const router = Router()
 
+router.patch('/profile', middlewareAuth.jwt, controllerUser.updateProfile)
+
+router.get(
+  '/login-history',
+  middlewareAuth.jwt,
+  middlewareAuth.admin,
+  controllerUser.getLoginHistory,
+)
+
 router.patch('/cart', middlewareAuth.jwt, controllerUser.cart)
 
 router.get('/cart', middlewareAuth.jwt, controllerUser.getCart)

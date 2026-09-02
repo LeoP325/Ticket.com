@@ -32,6 +32,25 @@ const schema = new mongoose_1.Schema({
         },
         unique: true,
     },
+    nickname: {
+        type: String,
+        trim: true,
+        maxLength: [30, '暱稱最長 30 個字'],
+    },
+    email: {
+        type: String,
+        required: [true, 'Email 必填'],
+        lowercase: true,
+        trim: true,
+        unique: true,
+        validate: {
+            validator: (value) => validator_1.default.isEmail(value),
+            message: 'Email 格式錯誤',
+        },
+    },
+    emailVerified: { type: Boolean, default: false },
+    emailVerificationToken: { type: String, select: false },
+    emailVerificationExpires: { type: Date, select: false },
     password: {
         type: String,
         required: [true, '密碼必填'],

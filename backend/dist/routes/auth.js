@@ -38,6 +38,7 @@ const controllerAuth = __importStar(require("../controllers/auth"));
 const middlewareAuth = __importStar(require("../middlewares/auth"));
 const router = (0, express_1.Router)();
 router.post('/register', controllerAuth.register);
+router.post('/verify-email', controllerAuth.verifyEmail);
 router.post('/login', middlewareAuth.login, controllerAuth.login);
 router.post('/refresh', controllerAuth.refresh);
 router.delete('/logout', controllerAuth.logout);

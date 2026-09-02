@@ -37,13 +37,7 @@ const schema = new Schema<ISeat>(
 )
 
 schema.index({ event: 1, number: 1 }, { unique: true })
-schema.index(
-  { event: 1, heldBy: 1 },
-  { unique: true, partialFilterExpression: { heldBy: { $type: 'objectId' } } },
-)
-schema.index(
-  { event: 1, bookedBy: 1 },
-  { unique: true, partialFilterExpression: { bookedBy: { $type: 'objectId' } } },
-)
+schema.index({ event: 1, heldBy: 1 }, { name: 'event_heldBy_nonunique' })
+schema.index({ event: 1, bookedBy: 1 }, { name: 'event_bookedBy_nonunique' })
 
 export default model('seats', schema)

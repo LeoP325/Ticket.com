@@ -38,6 +38,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/admin/login-history': RouteRecordInfo<
+      '/admin/login-history',
+      '/admin/login-history',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/events/[slug]': RouteRecordInfo<
       '/events/[slug]',
       '/events/:slug',
@@ -59,6 +66,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/profile': RouteRecordInfo<
+      '/profile',
+      '/profile',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/register': RouteRecordInfo<
       '/register',
       '/register',
@@ -69,6 +83,13 @@ declare module 'vue-router/auto-routes' {
     '/ticket': RouteRecordInfo<
       '/ticket',
       '/ticket',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/verify-email': RouteRecordInfo<
+      '/verify-email',
+      '/verify-email',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -89,6 +110,14 @@ declare module 'vue-router/auto-routes' {
     'src/pages/index.vue': {
       routes:
         | '/'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
+    'src/pages/admin/login-history.vue': {
+      routes:
+        | '/admin/login-history'
       views:
         | never
       pathParamNames:
@@ -118,6 +147,14 @@ declare module 'vue-router/auto-routes' {
       pathParamNames:
         | never
     }
+    'src/pages/profile.vue': {
+      routes:
+        | '/profile'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
     'src/pages/register.vue': {
       routes:
         | '/register'
@@ -129,6 +166,14 @@ declare module 'vue-router/auto-routes' {
     'src/pages/ticket.vue': {
       routes:
         | '/ticket'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
+    'src/pages/verify-email.vue': {
+      routes:
+        | '/verify-email'
       views:
         | never
       pathParamNames:

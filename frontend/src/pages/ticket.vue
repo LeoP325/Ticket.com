@@ -4,7 +4,12 @@
   import BookingSummary from '@/components/booking/BookingSummary.vue'
   import SeatGrid from '@/components/booking/SeatGrid.vue'
   import { event as defaultEvent, findEvent } from '@/data/event'
-  import { useConfirmSeatMutation, useHoldSeatMutation, useReleaseSeatMutation, useSeatsQuery } from '@/quries/ticket'
+  import {
+    useConfirmSeatMutation,
+    useHoldSeatMutation,
+    useReleaseSeatMutation,
+    useSeatsQuery,
+  } from '@/quries/ticket'
   import { useSnackbarStore } from '@/stores/snackbar'
 
   const route = useRoute()
@@ -12,15 +17,38 @@
   const activeEvent = findEvent(eventSlug) ?? defaultEvent
   const snackbar = useSnackbarStore()
   const { data, isLoading, refetch } = useSeatsQuery(activeEvent.slug)
-  const { mutateAsync: holdSeat, isLoading: isHolding } = useHoldSeatMutation(activeEvent.slug)
-  const { mutateAsync: releaseSeat, isLoading: isReleasing } = useReleaseSeatMutation(activeEvent.slug)
-  const { mutateAsync: confirmSeat, isLoading: isConfirming } = useConfirmSeatMutation(activeEvent.slug)
+  const { mutateAsync: holdSeat, isLoading: isHolding } = useHoldSeatMutation(
+    activeEvent.slug,
+  )
+  const { mutateAsync: releaseSeat, isLoading: isReleasing }
+    = useReleaseSeatMutation(activeEvent.slug)
+  const { mutateAsync: confirmSeat, isLoading: isConfirming }
+    = useConfirmSeatMutation(activeEvent.slug)
 
-  const heldSeat = computed(() => data.value?.seats.find(seat => seat.status === 'mine-held'))
-  const bookedSeat = computed(() => data.value?.seats.find(seat => seat.status === 'mine-booked'))
-  const selectedSeat = computed(() => bookedSeat.value ?? heldSeat.value)
-  const selectionFull = computed(() => Boolean(data.value && !heldSeat.value && data.value.activeSelectors >= data.value.maxSelectors))
-  const busy = computed(() => isHolding.value || isReleasing.value || isConfirming.value)
+  const heldSeats = computed(
+    () => data.value?.seats.filter(seat => seat.status === 'mine-held') ?? [],
+  )
+  const bookedSeats = computed(
+    () => data.value?.seats.filter(seat => seat.status === 'mine-booked') ?? [],
+  )
+  const selectedSeats = computed(() =>
+    bookedSeats.value.length > 0 ? bookedSeats.value : heldSeats.value,
+  )
+  const heldUntil = computed(
+    () =>
+      heldSeats.value
+        .map(seat => seat.heldUntil)
+        .filter(Boolean)
+        .toSorted()[0],
+  )
+  const selectionFull = computed(() => {
+    if (!data.value || heldSeats.value.length > 0) return false
+    return data.value.activeSelectors >= data.value.maxSelectors
+  })
+  const selectionLimitReached = computed(() => selectedSeats.value.length >= 2)
+  const busy = computed(
+    () => isHolding.value || isReleasing.value || isConfirming.value,
+  )
   let refreshTimer: ReturnType<typeof setInterval> | undefined
 
   onMounted(() => {
@@ -31,7 +59,10 @@
   async function selectSeat (number: number) {
     try {
       await holdSeat(number)
-      snackbar.add({ text: `${number} 號座位已保留 5 分鐘`, color: 'orange-darken-1' })
+      snackbar.add({
+        text: `${number} 號座位已保留 5 分鐘`,
+        color: 'orange-darken-1',
+      })
     } catch (error) {
       snackbar.addError(error)
       await refetch()
@@ -76,20 +107,37 @@
     >目前已有 10 位使用者選位中，請稍後再試。</v-alert>
 
     <div class="selector-status mb-6">
-      <span>目前選位 {{ data?.activeSelectors ?? 0 }} / {{ data?.maxSelectors ?? 10 }} 人</span>
-      <span>每人限購 1 張</span><span>座位保留 5 分鐘</span>
+      <span>目前選位 {{ data?.activeSelectors ?? 0 }} /
+        {{ data?.maxSelectors ?? 10 }} 人</span>
+
+      <span>每個帳號最多 2 張</span><span>座位保留 5 分鐘</span>
     </div>
 
     <v-skeleton-loader v-if="isLoading && !data" type="article" />
 
     <v-row v-else>
-      <v-col cols="12" md="8"><SeatGrid :disabled="selectionFull || busy || Boolean(bookedSeat)" :seats="data?.seats ?? []" @select="selectSeat" /></v-col>
+      <v-col
+        cols="12"
+        md="8"
+      ><SeatGrid
+        :disabled="
+          selectionFull ||
+            selectionLimitReached ||
+            busy ||
+            bookedSeats.length > 0
+        "
+        :seats="data?.seats ?? []"
+        @select="selectSeat"
+      /></v-col>
 
-      <v-col cols="12" md="4"><BookingSummary
-        :booked="Boolean(bookedSeat)"
-        :held-until="heldSeat?.heldUntil"
+      <v-col
+        cols="12"
+        md="4"
+      ><BookingSummary
+        :booked="bookedSeats.length > 0"
+        :held-until="heldUntil"
         :loading="busy"
-        :seat-number="selectedSeat?.number"
+        :seat-numbers="selectedSeats.map((seat) => seat.number)"
         @confirm="confirm"
         @expired="refetch"
         @release="release"
@@ -99,11 +147,31 @@
 </template>
 
 <style scoped>
-  .booking-page { max-width: 1180px; padding-bottom: 80px; padding-top: 48px; }
-  .booking-header { border-bottom: 1px solid #e4e7ec; margin-bottom: 24px; padding-bottom: 24px; }
-  .booking-header h1 { color: #172033; font-size: clamp(1.8rem, 4vw, 2.8rem); }
-  .booking-header p:last-child { color: #667085; margin-top: 8px; }
-  .selector-status { color: #475467; display: flex; flex-wrap: wrap; font-size: .9rem; gap: 20px; }
+.booking-page {
+  max-width: 1180px;
+  padding-bottom: 80px;
+  padding-top: 48px;
+}
+.booking-header {
+  border-bottom: 1px solid #e4e7ec;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+}
+.booking-header h1 {
+  color: #172033;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+}
+.booking-header p:last-child {
+  color: #667085;
+  margin-top: 8px;
+}
+.selector-status {
+  color: #475467;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  gap: 20px;
+}
 </style>
 
 <route lang="yaml">

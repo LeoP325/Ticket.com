@@ -2,6 +2,7 @@ import axios, { AxiosError, type AxiosResponse } from 'axios'
 import { effectScope } from 'vue'
 import { useRefreshMutation } from '@/quries/auth'
 import { useUserStore } from '@/stores/user'
+import { getSessionId } from '@/utils/session'
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -33,6 +34,7 @@ apiAuth.interceptors.request.use(async config => {
   // 自動帶上 AT
   const user = useUserStore()
   config.headers.set('Authorization', `Bearer ${user.accessToken}`)
+  config.headers.set('X-Session-ID', await getSessionId())
   return config
 })
 

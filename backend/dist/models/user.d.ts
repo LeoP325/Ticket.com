@@ -6,6 +6,11 @@ export interface ICart {
 export interface IUser {
     _id: Types.ObjectId;
     account: string;
+    nickname?: string;
+    email: string;
+    emailVerified: boolean;
+    emailVerificationToken?: string;
+    emailVerificationExpires?: Date;
     password: string;
     cart: ICart[];
     role: 'user' | 'admin';
@@ -42,6 +47,51 @@ declare const _default: import("mongoose").Model<IUser, {}, {}, {
         id: string;
     }>>;
     account?: import("mongoose").SchemaDefinitionProperty<string, IUser, import("mongoose").Document<unknown, {}, IUser, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<IUser & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>>;
+    nickname?: import("mongoose").SchemaDefinitionProperty<string | undefined, IUser, import("mongoose").Document<unknown, {}, IUser, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<IUser & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>>;
+    email?: import("mongoose").SchemaDefinitionProperty<string, IUser, import("mongoose").Document<unknown, {}, IUser, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<IUser & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>>;
+    emailVerified?: import("mongoose").SchemaDefinitionProperty<boolean, IUser, import("mongoose").Document<unknown, {}, IUser, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<IUser & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>>;
+    emailVerificationToken?: import("mongoose").SchemaDefinitionProperty<string | undefined, IUser, import("mongoose").Document<unknown, {}, IUser, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<IUser & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>>;
+    emailVerificationExpires?: import("mongoose").SchemaDefinitionProperty<Date | undefined, IUser, import("mongoose").Document<unknown, {}, IUser, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<IUser & Required<{
         _id: Types.ObjectId;

@@ -13,6 +13,9 @@ export interface IEvent {
   image: string
   price: number
   capacity: number
+  saleMethod: 'reserved' | 'raffle'
+  drawDate?: Date
+  raffleDrawnAt?: Date
   createdAt: Date
 }
 
@@ -31,6 +34,9 @@ const schema = new Schema<IEvent>(
     image: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
     capacity: { type: Number, required: true, min: 1 },
+    saleMethod: { type: String, enum: ['reserved', 'raffle'], default: 'reserved' },
+    drawDate: Date,
+    raffleDrawnAt: Date,
   },
   { timestamps: true },
 )

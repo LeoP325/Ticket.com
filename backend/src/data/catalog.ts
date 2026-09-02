@@ -2,8 +2,26 @@ import Event from '../models/event'
 import Seat from '../models/seat'
 import SeatingMap from '../models/seatingMap'
 import Venue from '../models/venue'
+import User from '../models/user'
 
 const catalog = [
+  {
+    slug: 'fan-meeting-2026',
+    title: '粉絲見面會',
+    subtitle: '與喜愛的藝人近距離相見',
+    description: '將抽選出 5 位幸運粉絲，獲得與偶像近距離接觸及互動交流的機會。',
+    category: '粉絲見面會',
+    venue: '50人座位表',
+    city: '台北市',
+    address: '台北市信義區信義路五段 1 號',
+    startDate: '2026-09-05T06:00:00.000Z',
+    endDate: '2026-09-05T08:00:00.000Z',
+    image: 'fan-meeting-2026.png',
+    price: 0,
+    capacity: 5,
+    saleMethod: 'raffle',
+    drawDate: '2026-08-28T03:35:00.000Z',
+  },
   {
     slug: 'starry-night-2026',
     title: '星夜音樂祭 2026',
@@ -17,7 +35,9 @@ const catalog = [
     endDate: '2026-10-17T14:00:00.000Z',
     image: 'banner-1.svg',
     price: 1280,
-    capacity: 50,
+    capacity: 15000,
+    saleMethod: 'raffle',
+    drawDate: '2026-09-29T16:00:00.000Z',
   },
   {
     slug: 'island-pulse',
@@ -33,6 +53,7 @@ const catalog = [
     image: 'island-pulse.png',
     price: 1680,
     capacity: 80,
+    saleMethod: 'reserved',
   },
   {
     slug: 'light-between-us',
@@ -48,6 +69,7 @@ const catalog = [
     image: 'light-between-us.png',
     price: 1480,
     capacity: 100,
+    saleMethod: 'reserved',
   },
 ] as const
 
@@ -57,7 +79,13 @@ async function removeLegacySeatIndexes() {
     const legacyNames = new Set(['number_1', 'heldBy_1', 'bookedBy_1'])
     await Promise.all(
       indexes
-        .filter((index) => legacyNames.has(index.name!))
+        .filter(
+          (index) =>
+            legacyNames.has(index.name!) ||
+            (index.unique === true &&
+              'event' in index.key &&
+              ('heldBy' in index.key || 'bookedBy' in index.key)),
+        )
         .map((index) => Seat.collection.dropIndex(index.name!)),
     )
   } catch (error) {
@@ -67,8 +95,12 @@ async function removeLegacySeatIndexes() {
 
 export async function ensureCatalog() {
   await removeLegacySeatIndexes()
+  await User.collection.updateMany(
+    { emailVerified: { $exists: false } },
+    { $set: { emailVerified: true } },
+  )
 
-  for (const [catalogIndex, item] of catalog.entries()) {
+  for (const item of catalog) {
     const venue = await Venue.findOneAndUpdate(
       { name: item.venue },
       { $set: { address: item.address, city: item.city }, $setOnInsert: { description: '' } },
@@ -88,11 +120,13 @@ export async function ensureCatalog() {
           startDate: new Date(item.startDate),
           endDate: new Date(item.endDate),
           capacity: item.capacity,
+          saleMethod: item.saleMethod,
+          drawDate: 'drawDate' in item ? new Date(item.drawDate) : null,
         },
       },
       { upsert: true, returnDocument: 'after' },
     )
-    if (catalogIndex === 0) {
+    if (item.slug === 'starry-night-2026') {
       // Preserve bookings made with the previous one-event schema while attaching the missing relations.
       await Seat.collection.updateMany(
         { event: { $exists: false } },
@@ -113,23 +147,24 @@ export async function ensureCatalog() {
         )
       }
     }
-    await Seat.bulkWrite(
-      Array.from({ length: item.capacity }, (_, index) => ({
-        updateOne: {
-          filter: { event: event._id, number: index + 1 },
-          update: {
-            $setOnInsert: {
-              seatingMap: seatingMap._id,
-              section: 'A',
-              row: String.fromCharCode(65 + Math.floor(index / 10)),
-              type: '一般票',
-              price: item.price,
-              status: 'available',
+    if (item.saleMethod === 'reserved')
+      await Seat.bulkWrite(
+        Array.from({ length: item.capacity }, (_, index) => ({
+          updateOne: {
+            filter: { event: event._id, number: index + 1 },
+            update: {
+              $setOnInsert: {
+                seatingMap: seatingMap._id,
+                section: 'A',
+                row: String.fromCharCode(65 + Math.floor(index / 10)),
+                type: '一般票',
+                price: item.price,
+                status: 'available',
+              },
             },
+            upsert: true,
           },
-          upsert: true,
-        },
-      })),
-    )
+        })),
+      )
   }
 }

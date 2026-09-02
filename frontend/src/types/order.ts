@@ -8,7 +8,7 @@ export interface OrderItem {
 export interface Order {
   _id: string
   orderNo: string
-  status: 'paid' | 'cancelled'
+  status: 'paid' | 'cancelled' | 'refunded'
   totalAmount: number
   items: OrderItem[]
   createdAt: string

@@ -10,6 +10,14 @@ declare namespace NodeJS {
     CLOUDINARY_CLOUD_NAME: string
     CLOUDINARY_API_KEY: string
     CLOUDINARY_API_SECRET: string
+    FRONTEND_URL?: string
+    SMTP_HOST?: string
+    SMTP_PORT?: string
+    SMTP_SECURE?: string
+    SMTP_USER?: string
+    SMTP_PASS?: string
+    MAIL_FROM?: string
+    NODE_ENV?: 'development' | 'production' | 'test'
   }
 }
 

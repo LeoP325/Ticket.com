@@ -3,6 +3,7 @@ export interface IRefreshToken {
     _id: Types.ObjectId;
     user: Types.ObjectId;
     refreshToken: string;
+    sessionId: string;
     createdAt: Date;
 }
 export type RefreshTokenDocument = HydratedDocument<IRefreshToken>;
@@ -44,6 +45,15 @@ declare const _default: import("mongoose").Model<IRefreshToken, {}, {}, {
         id: string;
     }>>;
     refreshToken?: import("mongoose").SchemaDefinitionProperty<string, IRefreshToken, import("mongoose").Document<unknown, {}, IRefreshToken, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<IRefreshToken & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>>;
+    sessionId?: import("mongoose").SchemaDefinitionProperty<string, IRefreshToken, import("mongoose").Document<unknown, {}, IRefreshToken, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<IRefreshToken & Required<{
         _id: Types.ObjectId;

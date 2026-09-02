@@ -13,6 +13,9 @@ const schema = new mongoose_1.Schema({
     image: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
     capacity: { type: Number, required: true, min: 1 },
+    saleMethod: { type: String, enum: ['reserved', 'raffle'], default: 'reserved' },
+    drawDate: Date,
+    raffleDrawnAt: Date,
 }, { timestamps: true });
 exports.default = (0, mongoose_1.model)('events', schema);
 //# sourceMappingURL=event.js.map

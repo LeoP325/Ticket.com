@@ -1,7 +1,7 @@
 import { Schema, type HydratedDocument, Types } from 'mongoose';
 export interface IOrderItem {
     event: Types.ObjectId;
-    seat: Types.ObjectId;
+    seat?: Types.ObjectId;
     eventTitle: string;
     seatLabel: string;
     price: number;
@@ -11,7 +11,7 @@ export interface IOrder {
     _id: Types.ObjectId;
     user: Types.ObjectId;
     orderNo: string;
-    status: 'paid' | 'cancelled';
+    status: 'paid' | 'cancelled' | 'refunded';
     totalAmount: number;
     items: IOrderItem[];
     createdAt: Date;
@@ -64,7 +64,7 @@ declare const _default: import("mongoose").Model<IOrder, {}, {}, {
     }, "id"> & import("mongoose").HydratedDocumentOverrides<{
         id: string;
     }>>;
-    status?: import("mongoose").SchemaDefinitionProperty<"paid" | "cancelled", IOrder, import("mongoose").Document<unknown, {}, IOrder, {
+    status?: import("mongoose").SchemaDefinitionProperty<"paid" | "cancelled" | "refunded", IOrder, import("mongoose").Document<unknown, {}, IOrder, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<IOrder & Required<{
         _id: Types.ObjectId;

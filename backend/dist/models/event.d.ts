@@ -12,6 +12,9 @@ export interface IEvent {
     image: string;
     price: number;
     capacity: number;
+    saleMethod: 'reserved' | 'raffle';
+    drawDate?: Date;
+    raffleDrawnAt?: Date;
     createdAt: Date;
 }
 export type EventDocument = HydratedDocument<IEvent>;
@@ -134,6 +137,33 @@ declare const _default: import("mongoose").Model<IEvent, {}, {}, {
         id: string;
     }>>;
     capacity?: import("mongoose").SchemaDefinitionProperty<number, IEvent, import("mongoose").Document<unknown, {}, IEvent, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<IEvent & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>>;
+    saleMethod?: import("mongoose").SchemaDefinitionProperty<"reserved" | "raffle", IEvent, import("mongoose").Document<unknown, {}, IEvent, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<IEvent & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>>;
+    drawDate?: import("mongoose").SchemaDefinitionProperty<Date | undefined, IEvent, import("mongoose").Document<unknown, {}, IEvent, {
+        id: string;
+    }, import("mongoose").DefaultSchemaOptions> & Omit<IEvent & Required<{
+        _id: Types.ObjectId;
+    }> & {
+        __v: number;
+    }, "id"> & import("mongoose").HydratedDocumentOverrides<{
+        id: string;
+    }>>;
+    raffleDrawnAt?: import("mongoose").SchemaDefinitionProperty<Date | undefined, IEvent, import("mongoose").Document<unknown, {}, IEvent, {
         id: string;
     }, import("mongoose").DefaultSchemaOptions> & Omit<IEvent & Required<{
         _id: Types.ObjectId;

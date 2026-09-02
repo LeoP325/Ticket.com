@@ -49,6 +49,8 @@ async function getEvent(slug) {
     const event = await event_1.default.findOne({ slug });
     if (!event)
         throw new Error('EVENT NOT FOUND');
+    if (event.saleMethod === 'raffle')
+        throw new Error('RAFFLE ONLY');
     return event;
 }
 async function clearExpiredHolds(eventId) {
@@ -60,10 +62,7 @@ const getSeats = async (req, res) => {
     const userId = req.user._id;
     const now = new Date();
     const seats = await seat_1.default.find({ event: event._id }).sort({ number: 1 }).lean();
-    const activeSelectors = await seat_1.default.countDocuments({
-        event: event._id,
-        heldUntil: (0, mongoose_1.trusted)({ $gt: now }),
-    });
+    const activeSelectors = (await seat_1.default.distinct('heldBy', { event: event._id, heldUntil: (0, mongoose_1.trusted)({ $gt: now }) })).length;
     res.status(http_status_codes_1.StatusCodes.OK).json({
         success: true,
         message: '',
@@ -95,19 +94,23 @@ const holdSeat = async (req, res) => {
     const userId = req.user._id;
     const now = new Date();
     await clearExpiredHolds(event._id);
-    if (await seat_1.default.exists({ event: event._id, bookedBy: userId }))
-        throw new Error('BOOKING EXISTS');
-    const currentHold = await seat_1.default.findOne({ event: event._id, heldBy: userId });
-    if (currentHold?.number === number) {
+    const [bookedCount, heldSeats] = await Promise.all([
+        seat_1.default.countDocuments({ event: event._id, bookedBy: userId }),
+        seat_1.default.find({ event: event._id, heldBy: userId }),
+    ]);
+    const currentHold = heldSeats.find((seat) => seat.number === number);
+    if (currentHold) {
         res.status(http_status_codes_1.StatusCodes.OK).json({ success: true, message: '', result: currentHold });
         return;
     }
-    if (!currentHold &&
-        (await seat_1.default.countDocuments({ event: event._id, heldUntil: (0, mongoose_1.trusted)({ $gt: now }) })) >=
-            MAX_ACTIVE_HOLDS)
+    if (bookedCount + heldSeats.length >= 2)
+        throw new Error('BOOKING EXISTS');
+    if (heldSeats.length === 0 &&
+        (await seat_1.default.distinct('heldBy', {
+            event: event._id,
+            heldUntil: (0, mongoose_1.trusted)({ $gt: now }),
+        })).length >= MAX_ACTIVE_HOLDS)
         throw new Error('SELECTION FULL');
-    if (currentHold)
-        await seat_1.default.updateOne({ _id: currentHold._id }, { $unset: { heldBy: 1, heldUntil: 1 } });
     const heldUntil = new Date(Date.now() + HOLD_MS);
     const seat = await seat_1.default.findOneAndUpdate({
         event: event._id,
@@ -118,8 +121,10 @@ const holdSeat = async (req, res) => {
     if (!seat)
         throw new Error('SEAT UNAVAILABLE');
     // ponytail: MongoDB post-check is enough for the MVP's ten concurrent selectors.
-    if ((await seat_1.default.countDocuments({ event: event._id, heldUntil: (0, mongoose_1.trusted)({ $gt: now }) })) >
-        MAX_ACTIVE_HOLDS) {
+    if ((await seat_1.default.distinct('heldBy', {
+        event: event._id,
+        heldUntil: (0, mongoose_1.trusted)({ $gt: now }),
+    })).length > MAX_ACTIVE_HOLDS) {
         await seat_1.default.updateOne({ _id: seat._id, heldBy: userId }, { $unset: { heldBy: 1, heldUntil: 1 } });
         throw new Error('SELECTION FULL');
     }
@@ -135,16 +140,32 @@ exports.releaseSeat = releaseSeat;
 const confirmSeat = async (req, res) => {
     const event = await getEvent(String(req.params.eventSlug));
     const userId = req.user._id;
-    const existingOrder = await order_1.default.findOne({ user: userId, 'items.event': event._id });
+    const existingOrder = await order_1.default.findOne({
+        user: userId,
+        'items.event': event._id,
+        status: 'paid',
+    });
     if (existingOrder) {
         res.status(http_status_codes_1.StatusCodes.OK).json({ success: true, message: '', result: existingOrder });
         return;
     }
-    const seat = await seat_1.default.findOneAndUpdate({ event: event._id, heldBy: userId, heldUntil: (0, mongoose_1.trusted)({ $gt: new Date() }), bookedBy: null }, {
+    const seats = await seat_1.default.find({
+        event: event._id,
+        heldBy: userId,
+        heldUntil: (0, mongoose_1.trusted)({ $gt: new Date() }),
+        bookedBy: null,
+    }).sort({ number: 1 });
+    if (!seats.length || seats.length > 2)
+        throw new Error('HOLD EXPIRED');
+    const result = await seat_1.default.updateMany({
+        _id: (0, mongoose_1.trusted)({ $in: seats.map((seat) => seat._id) }),
+        heldBy: userId,
+        bookedBy: null,
+    }, {
         $set: { bookedBy: userId, bookedAt: new Date(), status: 'booked' },
         $unset: { heldBy: 1, heldUntil: 1 },
-    }, { returnDocument: 'after' });
-    if (!seat)
+    });
+    if (result.modifiedCount !== seats.length)
         throw new Error('HOLD EXPIRED');
     try {
         const order = await order_1.default.create({
@@ -153,22 +174,20 @@ const confirmSeat = async (req, res) => {
                 .toString()
                 .padStart(3, '0')}`,
             status: 'paid',
-            totalAmount: seat.price,
-            items: [
-                {
-                    event: event._id,
-                    seat: seat._id,
-                    eventTitle: event.title,
-                    seatLabel: `${seat.section} 區 ${seat.row} 排 ${seat.number} 號`,
-                    price: seat.price,
-                    quantity: 1,
-                },
-            ],
+            totalAmount: seats.reduce((total, seat) => total + seat.price, 0),
+            items: seats.map((seat) => ({
+                event: event._id,
+                seat: seat._id,
+                eventTitle: event.title,
+                seatLabel: `${seat.section} 區 ${seat.row} 排 ${seat.number} 號`,
+                price: seat.price,
+                quantity: 1,
+            })),
         });
         res.status(http_status_codes_1.StatusCodes.CREATED).json({ success: true, message: '', result: order });
     }
     catch (error) {
-        await seat_1.default.updateOne({ _id: seat._id, bookedBy: userId }, { $set: { status: 'available' }, $unset: { bookedBy: 1, bookedAt: 1 } });
+        await seat_1.default.updateMany({ _id: (0, mongoose_1.trusted)({ $in: seats.map((seat) => seat._id) }), bookedBy: userId }, { $set: { status: 'available' }, $unset: { bookedBy: 1, bookedAt: 1 } });
         throw error;
     }
 };

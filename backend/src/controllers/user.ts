@@ -5,6 +5,9 @@ import User from '../models/user'
 import Product from '../models/product'
 import { StatusCodes } from 'http-status-codes'
 import { Types } from 'mongoose'
+import LoginHistory from '../models/loginHistory'
+import bcrypt from 'bcrypt'
+import { profileSchema } from '../utils/profile'
 
 export const cart = async (req: Request, res: Response) => {
   const schema = yup.object({
@@ -66,5 +69,52 @@ export const getCart = async (req: Request, res: Response) => {
     success: true,
     message: '',
     result: user!.cart,
+  })
+}
+
+export const updateProfile = async (req: Request, res: Response) => {
+  const profile = await profileSchema.validate(req.body, { stripUnknown: true })
+  const user = await User.findById(req.user!._id, '+password').orFail(new Error('USER'))
+
+  if (profile.newPassword) {
+    const passwordMatches = await bcrypt.compare(profile.currentPassword!, user.password)
+    if (!passwordMatches) throw new Error('CURRENT PASSWORD')
+    user.password = profile.newPassword
+  }
+
+  user.email = profile.email
+  user.set('nickname', profile.nickname)
+  await user.save()
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: '',
+    result: { email: user.email, nickname: user.nickname ?? '' },
+  })
+}
+
+export const getLoginHistory = async (_req: Request, res: Response) => {
+  const history = await LoginHistory.find()
+    .sort({ loggedInAt: -1 })
+    .populate<{
+      user: { _id: Types.ObjectId; account: string; email: string; createdAt: Date }
+    }>('user', 'account email createdAt')
+    .lean()
+
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: '',
+    result: history.map((record) => ({
+      _id: record._id,
+      account: record.user.account,
+      email: record.user.email,
+      joinedAt: record.user.createdAt,
+      deviceType: record.deviceType,
+      browser: record.browser,
+      os: record.os,
+      ip: record.ip ?? 'Unknown',
+      userAgent: record.userAgent,
+      loggedInAt: record.loggedInAt,
+    })),
   })
 }

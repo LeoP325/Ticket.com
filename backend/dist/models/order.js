@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = require("mongoose");
 const itemSchema = new mongoose_1.Schema({
     event: { type: mongoose_1.Schema.Types.ObjectId, ref: 'events', required: true },
-    seat: { type: mongoose_1.Schema.Types.ObjectId, ref: 'seats', required: true },
+    seat: { type: mongoose_1.Schema.Types.ObjectId, ref: 'seats' },
     eventTitle: { type: String, required: true },
     seatLabel: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
@@ -12,7 +12,7 @@ const itemSchema = new mongoose_1.Schema({
 const schema = new mongoose_1.Schema({
     user: { type: mongoose_1.Schema.Types.ObjectId, ref: 'users', required: true },
     orderNo: { type: String, required: true, unique: true },
-    status: { type: String, enum: ['paid', 'cancelled'], default: 'paid' },
+    status: { type: String, enum: ['paid', 'cancelled', 'refunded'], default: 'paid' },
     totalAmount: { type: Number, required: true, min: 0 },
     items: { type: [itemSchema], required: true },
 }, { timestamps: true });

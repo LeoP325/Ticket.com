@@ -10,6 +10,11 @@ export interface ICart {
 export interface IUser {
   _id: Types.ObjectId
   account: string
+  nickname?: string
+  email: string
+  emailVerified: boolean
+  emailVerificationToken?: string
+  emailVerificationExpires?: Date
   password: string
   cart: ICart[]
   role: 'user' | 'admin'
@@ -49,6 +54,25 @@ const schema = new Schema<IUser>(
       },
       unique: true,
     },
+    nickname: {
+      type: String,
+      trim: true,
+      maxLength: [30, '暱稱最長 30 個字'],
+    },
+    email: {
+      type: String,
+      required: [true, 'Email 必填'],
+      lowercase: true,
+      trim: true,
+      unique: true,
+      validate: {
+        validator: (value: string) => validator.isEmail(value),
+        message: 'Email 格式錯誤',
+      },
+    },
+    emailVerified: { type: Boolean, default: false },
+    emailVerificationToken: { type: String, select: false },
+    emailVerificationExpires: { type: Date, select: false },
     password: {
       type: String,
       required: [true, '密碼必填'],

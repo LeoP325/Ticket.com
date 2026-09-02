@@ -27,6 +27,22 @@
           />
 
           <v-text-field
+            v-model="email"
+            :error-messages="errors.email"
+            label="Email"
+            prepend-icon="mdi-email-outline"
+            type="email"
+          />
+
+          <v-text-field
+            v-model="nickname"
+            :error-messages="errors.nickname"
+            hint="最多 30 個字，可留空"
+            label="暱稱（選填）"
+            prepend-icon="mdi-card-account-details-outline"
+          />
+
+          <v-text-field
             v-model="confirmPassword"
             :append-inner-icon="showPasswordConfirm ? 'mdi-eye' : 'mdi-eye-off'"
             :error-messages="errors.confirmPassword"
@@ -37,7 +53,12 @@
             @click:append-inner="showPasswordConfirm = !showPasswordConfirm"
           />
 
-          <v-btn block color="primary" :loading="isSubmitting" type="submit">註冊</v-btn>
+          <v-btn
+            block
+            color="primary"
+            :loading="isSubmitting"
+            type="submit"
+          >註冊</v-btn>
         </v-form>
       </v-col>
     </v-row>
@@ -47,7 +68,7 @@
 <script setup lang="ts">
   import validator from 'validator'
   import { useForm } from 'vee-validate'
-  import { ref } from 'vue'
+  import { shallowRef } from 'vue'
   import { useRouter } from 'vue-router'
   import * as yup from 'yup'
   import { useRegisterMutation } from '@/quries/auth'
@@ -57,8 +78,8 @@
   const router = useRouter()
   const snackbar = useSnackbarStore()
 
-  const showPassword = ref(false)
-  const showPasswordConfirm = ref(false)
+  const showPassword = shallowRef(false)
+  const showPasswordConfirm = shallowRef(false)
 
   const schema = yup.object({
     account: yup
@@ -68,7 +89,11 @@
       .min(4, '帳號必需是 4 個字以上')
       .max(20, '帳號必需是 20 個字以下')
       // 自訂驗證(驗證名稱, 錯誤訊息, 驗證方式)
-      .test('isAlphanumeric', '帳號只能是英數字', value => validator.isAlphanumeric(value)),
+      .test('isAlphanumeric', '帳號只能是英數字', value =>
+        validator.isAlphanumeric(value),
+      ),
+    email: yup.string().required('Email 必填').email('Email 格式錯誤'),
+    nickname: yup.string().trim().max(30, '暱稱最長 30 個字'),
     password: yup
       .string()
       .typeError('資料格式錯誤')
@@ -96,6 +121,8 @@
     // 設定表單的初始值
     initialValues: {
       account: '',
+      email: '',
+      nickname: '',
       password: '',
       confirmPassword: '',
     },
@@ -103,6 +130,8 @@
 
   // 建立表單輸入欄位
   const [account] = defineField('account')
+  const [email] = defineField('email')
+  const [nickname] = defineField('nickname')
   const [password] = defineField('password')
   const [confirmPassword] = defineField('confirmPassword')
 
@@ -112,9 +141,11 @@
     try {
       await register({
         account: values.account,
+        email: values.email,
+        nickname: values.nickname.trim() || undefined,
         password: values.password,
       })
-      snackbar.add({ text: '註冊成功', color: 'green' })
+      snackbar.add({ text: '註冊成功，現在可以直接登入', color: 'green' })
       router.push('/login')
     } catch (error) {
       snackbar.addError(error)

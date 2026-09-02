@@ -39,5 +39,6 @@ const middlewareAuth = __importStar(require("../middlewares/auth"));
 const router = (0, express_1.Router)();
 router.get('/', middlewareAuth.jwt, controllerOrder.get);
 router.get('/all', middlewareAuth.jwt, middlewareAuth.admin, controllerOrder.getAll);
+router.post('/:id/refund', middlewareAuth.jwt, controllerOrder.refund);
 exports.default = router;
 //# sourceMappingURL=order.js.map

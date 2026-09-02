@@ -12,6 +12,10 @@ const schema = new mongoose_1.Schema({
         type: String,
         required: true,
     },
+    sessionId: {
+        type: String,
+        required: true,
+    },
     createdAt: {
         type: Date,
         default: Date.now,
@@ -20,6 +24,7 @@ const schema = new mongoose_1.Schema({
         expires: 60 * 60 * 24 * 7,
     },
 });
+schema.index({ refreshToken: 1, sessionId: 1 }, { unique: true });
 schema.pre('save', function () {
     if (!this.isModified('refreshToken'))
         return;

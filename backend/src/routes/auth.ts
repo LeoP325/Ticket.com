@@ -5,6 +5,7 @@ import * as middlewareAuth from '../middlewares/auth'
 const router = Router()
 
 router.post('/register', controllerAuth.register)
+router.post('/verify-email', controllerAuth.verifyEmail)
 router.post('/login', middlewareAuth.login, controllerAuth.login)
 router.post('/refresh', controllerAuth.refresh)
 router.delete('/logout', controllerAuth.logout)

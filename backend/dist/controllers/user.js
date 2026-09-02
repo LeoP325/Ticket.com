@@ -36,13 +36,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCart = exports.cart = void 0;
+exports.getLoginHistory = exports.updateProfile = exports.getCart = exports.cart = void 0;
 const yup = __importStar(require("yup"));
 const validator_1 = __importDefault(require("validator"));
 const user_1 = __importDefault(require("../models/user"));
 const product_1 = __importDefault(require("../models/product"));
 const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = require("mongoose");
+const loginHistory_1 = __importDefault(require("../models/loginHistory"));
+const bcrypt_1 = __importDefault(require("bcrypt"));
+const profile_1 = require("../utils/profile");
 const cart = async (req, res) => {
     const schema = yup.object({
         product: yup
@@ -102,4 +105,46 @@ const getCart = async (req, res) => {
     });
 };
 exports.getCart = getCart;
+const updateProfile = async (req, res) => {
+    const profile = await profile_1.profileSchema.validate(req.body, { stripUnknown: true });
+    const user = await user_1.default.findById(req.user._id, '+password').orFail(new Error('USER'));
+    if (profile.newPassword) {
+        const passwordMatches = await bcrypt_1.default.compare(profile.currentPassword, user.password);
+        if (!passwordMatches)
+            throw new Error('CURRENT PASSWORD');
+        user.password = profile.newPassword;
+    }
+    user.email = profile.email;
+    user.set('nickname', profile.nickname);
+    await user.save();
+    res.status(http_status_codes_1.StatusCodes.OK).json({
+        success: true,
+        message: '',
+        result: { email: user.email, nickname: user.nickname ?? '' },
+    });
+};
+exports.updateProfile = updateProfile;
+const getLoginHistory = async (_req, res) => {
+    const history = await loginHistory_1.default.find()
+        .sort({ loggedInAt: -1 })
+        .populate('user', 'account email createdAt')
+        .lean();
+    res.status(http_status_codes_1.StatusCodes.OK).json({
+        success: true,
+        message: '',
+        result: history.map((record) => ({
+            _id: record._id,
+            account: record.user.account,
+            email: record.user.email,
+            joinedAt: record.user.createdAt,
+            deviceType: record.deviceType,
+            browser: record.browser,
+            os: record.os,
+            ip: record.ip ?? 'Unknown',
+            userAgent: record.userAgent,
+            loggedInAt: record.loggedInAt,
+        })),
+    });
+};
+exports.getLoginHistory = getLoginHistory;
 //# sourceMappingURL=user.js.map

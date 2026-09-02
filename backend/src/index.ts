@@ -8,14 +8,18 @@ import routeAuth from './routes/auth'
 import routeEvent from './routes/event'
 import routeOrder from './routes/order'
 import routeTicket from './routes/ticket'
+import routeUser from './routes/user'
 import middlewareError from './middlewares/error'
 import './configs/passport'
 import { ensureCatalog } from './data/catalog'
+import { verifyMailTransport } from './configs/mail'
+import { scheduleFanMeetingRaffle } from './controllers/raffle'
 
 mongoose.set('sanitizeFilter', true)
 
 const app = express()
 
+app.set('trust proxy', 1)
 app.use(helmet())
 
 app.use(
@@ -46,12 +50,15 @@ app.use('/auth', routeAuth)
 app.use('/events', routeEvent)
 app.use('/orders', routeOrder)
 app.use('/ticket', routeTicket)
+app.use('/users', routeUser)
 
 app.use(middlewareError)
 
 async function start() {
+  await verifyMailTransport()
   await mongoose.connect(process.env.DB_URL)
   await ensureCatalog()
+  await scheduleFanMeetingRaffle()
   console.log('資料庫連線成功')
 
   app.listen(process.env.PORT || 4000, () => {

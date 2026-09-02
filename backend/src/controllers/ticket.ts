@@ -12,6 +12,7 @@ const MAX_ACTIVE_HOLDS = 10
 async function getEvent(slug: string) {
   const event = await Event.findOne({ slug })
   if (!event) throw new Error('EVENT NOT FOUND')
+  if (event.saleMethod === 'raffle') throw new Error('RAFFLE ONLY')
   return event
 }
 
@@ -28,10 +29,9 @@ export const getSeats = async (req: Request, res: Response) => {
   const userId = req.user!._id
   const now = new Date()
   const seats = await Seat.find({ event: event._id }).sort({ number: 1 }).lean()
-  const activeSelectors = await Seat.countDocuments({
-    event: event._id,
-    heldUntil: trusted({ $gt: now }),
-  })
+  const activeSelectors = (
+    await Seat.distinct('heldBy', { event: event._id, heldUntil: trusted({ $gt: now }) })
+  ).length
 
   res.status(StatusCodes.OK).json({
     success: true,
@@ -65,20 +65,26 @@ export const holdSeat = async (req: Request, res: Response) => {
   const now = new Date()
   await clearExpiredHolds(event._id)
 
-  if (await Seat.exists({ event: event._id, bookedBy: userId })) throw new Error('BOOKING EXISTS')
-  const currentHold = await Seat.findOne({ event: event._id, heldBy: userId })
-  if (currentHold?.number === number) {
+  const [bookedCount, heldSeats] = await Promise.all([
+    Seat.countDocuments({ event: event._id, bookedBy: userId }),
+    Seat.find({ event: event._id, heldBy: userId }),
+  ])
+  const currentHold = heldSeats.find((seat) => seat.number === number)
+  if (currentHold) {
     res.status(StatusCodes.OK).json({ success: true, message: '', result: currentHold })
     return
   }
+  if (bookedCount + heldSeats.length >= 2) throw new Error('BOOKING EXISTS')
   if (
-    !currentHold &&
-    (await Seat.countDocuments({ event: event._id, heldUntil: trusted({ $gt: now }) })) >=
-      MAX_ACTIVE_HOLDS
+    heldSeats.length === 0 &&
+    (
+      await Seat.distinct('heldBy', {
+        event: event._id,
+        heldUntil: trusted({ $gt: now }),
+      })
+    ).length >= MAX_ACTIVE_HOLDS
   )
     throw new Error('SELECTION FULL')
-  if (currentHold)
-    await Seat.updateOne({ _id: currentHold._id }, { $unset: { heldBy: 1, heldUntil: 1 } })
 
   const heldUntil = new Date(Date.now() + HOLD_MS)
   const seat = await Seat.findOneAndUpdate(
@@ -95,8 +101,12 @@ export const holdSeat = async (req: Request, res: Response) => {
 
   // ponytail: MongoDB post-check is enough for the MVP's ten concurrent selectors.
   if (
-    (await Seat.countDocuments({ event: event._id, heldUntil: trusted({ $gt: now }) })) >
-    MAX_ACTIVE_HOLDS
+    (
+      await Seat.distinct('heldBy', {
+        event: event._id,
+        heldUntil: trusted({ $gt: now }),
+      })
+    ).length > MAX_ACTIVE_HOLDS
   ) {
     await Seat.updateOne({ _id: seat._id, heldBy: userId }, { $unset: { heldBy: 1, heldUntil: 1 } })
     throw new Error('SELECTION FULL')
@@ -116,21 +126,35 @@ export const releaseSeat = async (req: Request, res: Response) => {
 export const confirmSeat = async (req: Request, res: Response) => {
   const event = await getEvent(String(req.params.eventSlug))
   const userId = req.user!._id
-  const existingOrder = await Order.findOne({ user: userId, 'items.event': event._id })
+  const existingOrder = await Order.findOne({
+    user: userId,
+    'items.event': event._id,
+    status: 'paid',
+  })
   if (existingOrder) {
     res.status(StatusCodes.OK).json({ success: true, message: '', result: existingOrder })
     return
   }
 
-  const seat = await Seat.findOneAndUpdate(
-    { event: event._id, heldBy: userId, heldUntil: trusted({ $gt: new Date() }), bookedBy: null },
+  const seats = await Seat.find({
+    event: event._id,
+    heldBy: userId,
+    heldUntil: trusted({ $gt: new Date() }),
+    bookedBy: null,
+  }).sort({ number: 1 })
+  if (!seats.length || seats.length > 2) throw new Error('HOLD EXPIRED')
+  const result = await Seat.updateMany(
+    {
+      _id: trusted({ $in: seats.map((seat) => seat._id) }),
+      heldBy: userId,
+      bookedBy: null,
+    },
     {
       $set: { bookedBy: userId, bookedAt: new Date(), status: 'booked' },
       $unset: { heldBy: 1, heldUntil: 1 },
     },
-    { returnDocument: 'after' },
   )
-  if (!seat) throw new Error('HOLD EXPIRED')
+  if (result.modifiedCount !== seats.length) throw new Error('HOLD EXPIRED')
 
   try {
     const order = await Order.create({
@@ -139,22 +163,20 @@ export const confirmSeat = async (req: Request, res: Response) => {
         .toString()
         .padStart(3, '0')}`,
       status: 'paid',
-      totalAmount: seat.price,
-      items: [
-        {
-          event: event._id,
-          seat: seat._id,
-          eventTitle: event.title,
-          seatLabel: `${seat.section} 區 ${seat.row} 排 ${seat.number} 號`,
-          price: seat.price,
-          quantity: 1,
-        },
-      ],
+      totalAmount: seats.reduce((total, seat) => total + seat.price, 0),
+      items: seats.map((seat) => ({
+        event: event._id,
+        seat: seat._id,
+        eventTitle: event.title,
+        seatLabel: `${seat.section} 區 ${seat.row} 排 ${seat.number} 號`,
+        price: seat.price,
+        quantity: 1,
+      })),
     })
     res.status(StatusCodes.CREATED).json({ success: true, message: '', result: order })
   } catch (error) {
-    await Seat.updateOne(
-      { _id: seat._id, bookedBy: userId },
+    await Seat.updateMany(
+      { _id: trusted({ $in: seats.map((seat) => seat._id) }), bookedBy: userId },
       { $set: { status: 'available' }, $unset: { bookedBy: 1, bookedAt: 1 } },
     )
     throw error

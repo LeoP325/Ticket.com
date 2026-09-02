@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
+    "test": "npm run build && node --test dist/utils/device.test.js dist/utils/profile.test.js dist/utils/raffle.test.js dist/utils/session.test.js",
     "start": "node dist/index.js"
   },
   "keywords": [],
@@ -21,6 +22,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@types/node": "^26.1.0",
+    "@types/nodemailer": "^8.0.1",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
@@ -47,6 +49,7 @@
     "mongoose": "^9.7.4",
     "multer": "^2.2.0",
     "multer-storage-cloudinary": "^4.0.0",
+    "nodemailer": "^9.0.5",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",

@@ -1,8 +1,33 @@
 <script setup lang="ts">
-  import { useOrdersQuery } from '@/quries/order'
+  import { shallowRef } from 'vue'
+  import { useOrdersQuery, useRefundOrderMutation } from '@/quries/order'
+  import { useSnackbarStore } from '@/stores/snackbar'
+  import type { Order } from '@/types/order'
 
   const { data: orders, isLoading } = useOrdersQuery()
+  const { mutateAsync: refundOrder, isLoading: isRefunding } = useRefundOrderMutation()
+  const snackbar = useSnackbarStore()
+  const refundingOrderId = shallowRef<string>()
   const dateFormatter = new Intl.DateTimeFormat('zh-TW', { dateStyle: 'medium', timeStyle: 'short' })
+
+  function statusText (status: Order['status']) {
+    if (status === 'paid') return '已付款'
+    if (status === 'refunded') return '已退票'
+    return '已取消'
+  }
+
+  async function submitRefund (orderId: string) {
+    if (!window.confirm('確定要退票嗎？退票後座位將重新開放。')) return
+    refundingOrderId.value = orderId
+    try {
+      await refundOrder(orderId)
+      snackbar.add({ text: '退票完成', color: 'green' })
+    } catch (error) {
+      snackbar.addError(error)
+    } finally {
+      refundingOrderId.value = undefined
+    }
+  }
 </script>
 
 <template>
@@ -14,10 +39,10 @@
     <div v-else class="order-list">
       <v-card v-for="order in orders" :key="order._id" class="order-card" variant="outlined">
         <v-card-text>
-          <div class="order-head"><div><span class="order-label">訂單編號</span><strong>{{ order.orderNo }}</strong></div><v-chip color="success" size="small" variant="tonal">{{ order.status === 'paid' ? '已付款' : '已取消' }}</v-chip></div>
+          <div class="order-head"><div><span class="order-label">訂單編號</span><strong>{{ order.orderNo }}</strong></div><v-chip :color="order.status === 'paid' ? 'success' : 'grey'" size="small" variant="tonal">{{ statusText(order.status) }}</v-chip></div>
           <v-divider class="my-4" />
           <div v-for="item in order.items" :key="`${order._id}-${item.seatLabel}`" class="order-item"><div><h2>{{ item.eventTitle }}</h2><p>{{ item.seatLabel }} ・ {{ item.quantity }} 張</p></div><strong>NT$ {{ item.price.toLocaleString('zh-TW') }}</strong></div>
-          <div class="order-foot"><span>{{ dateFormatter.format(new Date(order.createdAt)) }}</span><strong>合計 NT$ {{ order.totalAmount.toLocaleString('zh-TW') }}</strong></div>
+          <div class="order-foot"><span>{{ dateFormatter.format(new Date(order.createdAt)) }}</span><div class="order-actions"><strong>合計 NT$ {{ order.totalAmount.toLocaleString('zh-TW') }}</strong><v-btn v-if="order.status === 'paid'" color="error" :loading="isRefunding && refundingOrderId === order._id" size="small" variant="tonal" @click="submitRefund(order._id)">退票</v-btn></div></div>
         </v-card-text>
       </v-card>
     </div>
@@ -36,6 +61,7 @@
   .order-item h2 { color: #172033; font-size: 1.15rem; }
   .order-item p { color: #667085; margin-top: 5px; }
   .order-foot { background: #f8fafc; color: #475467; margin: 20px -16px -16px; padding: 14px 16px; }
+  .order-actions { align-items: center; display: flex; gap: 14px; }
   @media (max-width: 600px) { .order-item, .order-foot { align-items: flex-start; flex-direction: column; gap: 8px; } }
 </style>
 

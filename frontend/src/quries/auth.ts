@@ -1,4 +1,4 @@
-import type { LoginForm, RegisterForm } from '@/types/auth'
+import type { LoginForm, ProfileUpdateForm, RegisterForm } from '@/types/auth'
 import { defineMutation, useMutation } from '@pinia/colada'
 import * as auth from '@/services/auth'
 import { useUserStore } from '@/stores/user'
@@ -21,6 +21,10 @@ export const useLoginMutation = defineMutation(() => {
   })
 })
 
+export const useVerifyEmailMutation = defineMutation(() => {
+  return useMutation({ mutation: (token: string) => auth.verifyEmail(token) })
+})
+
 export const useRefreshMutation = defineMutation(() => {
   const user = useUserStore()
   return useMutation({
@@ -40,6 +44,16 @@ export const useLogoutMutation = defineMutation(() => {
     mutation: () => auth.logout(),
     onSettled: () => {
       user.logout()
+    },
+  })
+})
+
+export const useUpdateProfileMutation = defineMutation(() => {
+  const user = useUserStore()
+  return useMutation({
+    mutation: (data: ProfileUpdateForm) => auth.updateProfile(data),
+    onSuccess: response => {
+      user.updateProfile(response.data.result)
     },
   })
 })
