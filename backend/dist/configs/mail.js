@@ -44,7 +44,7 @@ async function sendRaffleWinnerEmail(email, account, eventTitle, eventSlug) {
 }
 async function verifyMailTransport() {
     const missing = ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS', 'MAIL_FROM', 'FRONTEND_URL'].filter((key) => !process.env[key]);
-    if (process.env.NODE_ENV === 'production' && missing.length)
+    if (process.env.REQUIRE_SMTP === 'true' && missing.length)
         throw new Error(`正式環境缺少 ${missing.join('、')}`);
     if (!hasSmtp) {
         console.log('SMTP 未設定，Email 使用開發模式');
