@@ -25,6 +25,7 @@ jobs:
       # 步驟三：複製編譯好的 dist 和必要檔案到 deploy 資料夾
       - name: Prepare Directory
         run: |
+          cd backend
           mkdir deploy
           cp -r dist deploy/
           cp package.json deploy/
@@ -34,5 +35,5 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: build
-          folder: deploy
+          folder: backend/deploy
           single-commit: true
