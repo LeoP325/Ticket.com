@@ -1,0 +1,1 @@
+import{In as e,dr as t,lr as n,or as r}from"./ripple-CwDq4Mhg.js";function i(){let i=n(!1);return e(()=>{window.requestAnimationFrame(()=>{i.value=!0})}),{ssrBootStyles:t(()=>i.value?void 0:{transition:`none !important`}),isBooted:r(i)}}export{i as t};

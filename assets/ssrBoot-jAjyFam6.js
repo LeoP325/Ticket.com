@@ -1,1 +1,0 @@
-import{Ln as e,ar as t,cr as n,ur as r}from"./ripple-CKicY3Zd.js";function i(){let i=n(!1);return e(()=>{window.requestAnimationFrame(()=>{i.value=!0})}),{ssrBootStyles:r(()=>i.value?void 0:{transition:`none !important`}),isBooted:t(i)}}export{i as t};
