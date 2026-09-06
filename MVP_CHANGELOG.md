@@ -709,3 +709,48 @@ VITE_API_URL=http://localhost:4000
 - 本次異動的前後端檔案 ESLint 檢查通過。
 
 ---
+
+## 2026-09-04：修正首頁輪播圖片無法點擊
+
+### 問題原因
+
+`HeroCarousel.vue` 原本在 `pointerdown` 時立即呼叫 `setPointerCapture()`，導致一般點擊的後續事件被輪播容器接管，圖片內的 `RouterLink` 無法收到完整點擊事件。
+
+### 修正內容
+
+- 一般點擊不再接管 pointer，讓輪播圖片可正常開啟活動詳情頁。
+- 只有游標移動超過 10px、確認為拖曳操作後才呼叫 `setPointerCapture()`。
+- 保留原有的左右滑動與拖曳後防止誤觸連結功能。
+- 維持 Vue Router 5，未進行會破壞 `vue-router/vite` 檔案路由的降版。
+
+### 驗證結果
+
+- `HeroCarousel.vue`、全站版型及首頁的 ESLint 檢查通過。
+- Vue／TypeScript 型別檢查通過。
+- Vite 正式建置通過。
+- 因測試環境沒有可連線的瀏覽器實例，本次未執行瀏覽器點擊 E2E 測試。
+
+---
+
+## 2026-09-06：首頁輪播改用 Vue Splide
+
+### 套件異動
+
+- 安裝 `@splidejs/vue-splide@0.6.12`，使用其相依的 `@splidejs/splide@4.1.4`。
+- 更新 `frontend/package.json` 與 `frontend/package-lock.json`。
+- 在 `frontend/env.d.ts` 補上 Vue Splide 的型別橋接，處理套件未從 `exports` 公開 TypeScript 宣告的問題。
+
+### 輪播效果
+
+- 將 `HeroCarousel.vue` 的自製計時器、拖曳與循環位移邏輯替換為 Vue Splide。
+- 套用 Ticket Plus 首頁的主要參數：循環播放、作用中圖片置中、7 秒自動切換及 400ms 切換動畫。
+- 桌面、平板與手機尺寸分別為 `800 × 500`、`600 × 375`、`343 × 214`。
+- 非作用中圖片維持 `scale(0.92)` 與 `opacity: 0.65`，桌面顯示導覽箭頭，手機隱藏箭頭。
+- 保留活動詳情頁連結、滑鼠拖曳、觸控滑動、圓點導覽、鍵盤操作及中文無障礙標籤。
+
+### 驗證結果
+
+- `npm run build` 通過，包含 Vue／TypeScript 型別檢查與 Vite 正式建置。
+- `HeroCarousel.vue` 與 `env.d.ts` 的 ESLint 檢查通過。
+- `npm ls` 確認 Vue Splide 與 Splide Core 均已正確安裝。
+- npm audit 回報依賴樹仍有 11 個安全性警告；本次未執行可能連帶升級其他套件的 `npm audit fix`。

@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { computed } from 'vue'
   import { useRouter } from 'vue-router'
+  import brandLogo from '@/assets/ct-ticket-logo.png'
   import { useLogoutMutation } from '@/quries/auth'
   import { useSnackbarStore } from '@/stores/snackbar'
   import { useUserStore } from '@/stores/user'
@@ -29,10 +30,12 @@
 <template>
   <v-app-bar class="site-header" color="#1967b3" flat height="68">
     <v-container class="header-inner">
-      <v-app-bar-title><router-link
-        class="brand"
-        to="/"
-      >TIX<span>LIGHT</span></router-link></v-app-bar-title>
+      <v-app-bar-title>
+        <router-link class="brand" to="/">
+          <img alt="CT&Ticket Logo" class="brand-logo" :src="brandLogo">
+          <span class="brand-name"><strong>CT&amp;</strong>Ticket</span>
+        </router-link>
+      </v-app-bar-title>
 
       <template
         v-for="nav in navs"
@@ -64,14 +67,28 @@
   max-width: 1180px;
 }
 .brand {
-  color: white;
-  font-size: 1.35rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  align-items: center;
+  color: #fff;
+  display: inline-flex;
+  gap: 10px;
   text-decoration: none;
 }
-.brand span {
-  color: #ffd166;
+.brand-logo {
+  height: 50px;
+  object-fit: contain;
+  width: 50px;
+}
+.brand-name {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-shadow: 0 2px 5px rgb(0 0 0 / 18%);
+  white-space: nowrap;
+}
+.brand-name strong {
+  color: #ffc400;
+  font-weight: 900;
 }
 .nav-button {
   color: white;
@@ -84,6 +101,16 @@
   white-space: nowrap;
 }
 @media (max-width: 600px) {
+  .brand {
+    gap: 6px;
+  }
+  .brand-logo {
+    height: 42px;
+    width: 42px;
+  }
+  .brand-name {
+    font-size: 1.1rem;
+  }
   .nav-button {
     min-width: auto;
     padding: 0 6px;

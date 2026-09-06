@@ -20,6 +20,6 @@
 
 <route lang="yaml">
 meta:
-  title: TIXLIGHT 活動購票
+  title: CT&Ticket 活動購票
   admin: false
 </route>

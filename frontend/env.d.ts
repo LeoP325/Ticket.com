@@ -7,3 +7,11 @@
 interface ImportMetaEnv {
   VITE_API_URL: string
 }
+
+declare module '@splidejs/vue-splide' {
+  import type { DefineComponent } from 'vue'
+
+  export type { Options } from '@splidejs/splide'
+  export const Splide: DefineComponent
+  export const SplideSlide: DefineComponent
+}
